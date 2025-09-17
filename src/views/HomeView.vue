@@ -1,39 +1,58 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 const delay = async () => new Promise((r) => setTimeout(() => r(), 500))
 const colors = ref([])
+const s = ref(100)
+const l = ref(50)
+const seenColors = ref([])
 async function run() {
-  let lastName = ''
+  colors.value = []
+  seenColors.value = []
   for (let i = 0; i < 360; i++) {
-    await fetch(`https://www.thecolorapi.com/id?hsl=${i},100%,50%`)
+    fetch(`https://www.thecolorapi.com/id?hsl=${i},${s.value}%,${l.value}%`)
       .then((rs) => rs.json())
       .then((data) => {
-        if (data.name.value === lastName) return
-        lastName = data.name.value
+        if (seenColors.value.includes(data.name.value)) return
+        seenColors.value.push(data.name.value)
+
         colors.value = [
           ...colors.value,
           {
-            name: data.name.value,
+            name: `${data.name.value} (${i})`,
             bg: data.hsl.value,
+            data,
+            i,
           },
         ]
-        // const newDiv = document.createElement('div')
-        // newDiv.innerText = data.name.value
-        // newDiv.style.background = data.hsl.value
-        // document.body.append(newDiv)
       })
     // await delay()
   }
 }
+
+// Runs too often
+// watch(s, run)
+// watch(l, run)
 
 onMounted(() => {
   run()
 })
 </script>
 <template>
-  <main>
-    <div v-for="color in colors" :key="color.name" :style="{ 'background-color': color.bg }">
+  <main class="flex flex-wrap w-screen">
+    <!-- {{ colors?.[0].data }} -->
+    <div
+      v-for="color in colors.sort((a, b) => a.i - b.i)"
+      :key="color.name"
+      class="text-black"
+      :style="{ 'background-color': color.bg }"
+    >
       {{ color.name }}
+    </div>
+    <div class="fixed bottom-0 inset-x-0 mx-auto">
+      <input type="range" name="sr" id="sr" v-model="s" v-on:change="run" />
+      <input type="number" name="sn" id="sn" v-model="s" v-on:change="run" />
+      <input type="range" name="l" id="l" v-model="l" v-on:change="run" />
+      <input type="number" name="ln" id="sn" v-model="l" v-on:change="run" />
     </div>
   </main>
 </template>
