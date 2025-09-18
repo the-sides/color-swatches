@@ -1,9 +1,7 @@
 @import 'tailwindcss';
 @import './base.css';
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  @apply antialiased;
   font-weight: normal;
 }
 
