@@ -1,11 +1,10 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 const colors = ref([])
-const colorSlots = ref([])
 const s = ref(100)
 const l = ref(50)
 
-const BATCH_SIZE = 30
+const DIST = 15
 const seenColors = ref([])
 const controllers = ref([])
 
@@ -17,11 +16,16 @@ async function run() {
 
   colors.value = []
   seenColors.value = []
-  for (let b = 0; b < 360 / BATCH_SIZE; b++) {
+  // 0, 15, 30, 45...
+  // 1, 16, 31, 46...
+
+  // 0, 1, 2
+  for (let offset = 0; offset < DIST; offset++) {
     const requests = []
-    for (let i = b * BATCH_SIZE; i < (b + 1) * BATCH_SIZE && i < 360; i++) {
+    for (let b = 0; b < 360 / DIST; b++) {
+      let h = b * DIST + offset
       const controller = new AbortController()
-      const req = fetch(`https://www.thecolorapi.com/id?hsl=${i},${s.value}%,${l.value}%`, {
+      const req = fetch(`https://www.thecolorapi.com/id?hsl=${h},${s.value}%,${l.value}%`, {
         signal: controller.signal,
       })
         .then((rs) => rs.json())
@@ -34,20 +38,20 @@ async function run() {
             {
               name: `${data.name.value}`, // <br> (i:${i}) <br> (dist:${data.name.distance})<br> (hsl:${data.hsl.value})`,
               h: data.hsl.h,
-              rgb: data.rgb.value,
+              rgb: data.hsl.value,
               bg: data.hsl.value,
+              batch: offset,
               data,
-              i,
             },
           ]
         })
       controllers.value = [...controllers.value, controller]
-      colorSlots.value = [...colorSlots.value, true]
       requests.push(req)
     }
     await Promise.all(requests)
   }
-  colorSlots.value = colors.value.map((c) => c.bg)
+  const score = colors.value.reduce((accu, c) => c.batch + accu, 0)
+  window.alert(score)
   controllers.value = []
 }
 
@@ -65,21 +69,17 @@ watch([s, l], () => {
     class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 w-screen relative [&_*]:text-white"
   >
     <div
-      v-for="(prevColor, i) in colorSlots"
-      :key="i"
+      v-for="color in colors"
+      :key="color.bg"
       class="text-black flex px-2 justify-center gap-6 flex-1 min-w-[200px] h-[200px] relative"
       :style="{
-        'background-color': colors[i]?.bg ?? prevColor,
-        order: colors[i]?.h ?? 999,
+        'background-color': color.bg,
+        order: color.h,
       }"
     >
-      <p class="bg-slate-700 px-2 py-1 w-fit h-fit text-center rounded-b" v-if="colors[i]">
-        {{ colors[i].name }} - {{ colors[i].rgb }}
+      <p class="bg-slate-700 px-2 py-1 w-fit h-fit text-center rounded-b">
+        {{ color.name }} - {{ color.batch }} - {{ color.rgb }}
       </p>
-      <div
-        v-else
-        class="justify-self-center self-center m-auto h-24 w-24 animate-spin rounded-full border-2 border-gray-300 border-t-transparent align-[-0.125em]"
-      ></div>
     </div>
     <div class="fixed z-10 bottom-0 flex justify-center w-full">
       <div
