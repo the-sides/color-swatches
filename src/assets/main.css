@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 @import './base.css';
+@theme {
+  --breakpoint-3xl: 112rem;
+}
+
 #app {
   @apply antialiased;
   font-weight: normal;
