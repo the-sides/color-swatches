@@ -1,61 +1,32 @@
-# vue-project
+# Color Swatches
 
-This template should help get you started developing with Vue 3 in Vite.
+Simply install dependencies and run.
 
-## Recommended IDE Setup
+## Project Setup and Execution
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
+Install dependencies
 ```sh
-pnpm install
+npm install
 ```
 
-### Compile and Hot-Reload for Development
-
+Launch project
 ```sh
-pnpm dev
+npm run dev
 ```
+The project may then be viewed at the default vite local url: http://localhost:5173/
 
-### Type-Check, Compile and Minify for Production
+All of the meaningful code is within `src/App.vue`
 
-```sh
-pnpm build
-```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+## The Challenge
+The obvious hurdle of this challenge is the fact that the only way to find all the defined names for a given saturation and lightness of an hsl color is to make every request for each possible hsl value. There may be a way to calculate distances between names more effieciently using the hex values, but considering the complications with calculating [between hex and hsl](https://mohanvadivel.com/thoughts/color-model-conversion) and the existance of this challenge, I figured managing multiple requests is the game.
 
-```sh
-pnpm test:unit
-```
+## Design Decisions
+I will be honest, I changed my approach a few times. Initially prototyping this, I knew it would be best to make parallel requests. Making all the requests at once may have worked locally and felt the most powerful, but it was far from sustainable considering realistic API and browser limitations. The next move was to batch the requests. Since http/2 can handle 100 concurrent requests on modern browsers, I wanted to stay close to that number. I could do a batch of 60 requests, but I was still facing loading experiences as the requests started from the lowest hue value. 
+The real secret sauce was spreading a batches' requests across the entire hue scale, and filling the gaps with followup request batches. 
+Such that in the first batch of requests, hue values of `[0, 15, 30, ..., 360]` are requested first.
 
-### Run End-to-End Tests with [Cypress](https://www.cypress.io/)
+This works particularly well, since "Red" for instance may occupy 4 hue units, while "Scarlet" takes 6 and so on. By spreading out the requests, the application has a better chance to hit more distinct names on the first request batch. 
 
-```sh
-pnpm test:e2e:dev
-```
-
-This runs the end-to-end tests against the Vite development server.
-It is much faster than the production build.
-
-But it's still recommended to test the production build with `test:e2e` before deploying (e.g. in CI environments):
-
-```sh
-pnpm build
-pnpm test:e2e
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-pnpm lint
-```
+## Further Improvements
+While not implemented, if I took more time on this, I would ensure a single request is followed-up with an immediate new request. Right now, a batch isn't started until all the requests in the previous batch are finished. This means, near the end of a batch, there's a chance that only a few requests are still running. Assuming that I am making 72 requests in a batch, I could maintain that number of concurrent requests if new requests are waiting on a previous individual request, not all the requests in the previous batch. Luckily we're fighting over milliseconds in this situation, but on a large-enough scale, that matters. 

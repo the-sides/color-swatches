@@ -5,25 +5,28 @@ const s = ref(100)
 const l = ref(50)
 
 // 360 / 15 = 24 reqs in each batch
-const DIST = 15
+// 360 / 5 = 72 reqs in each batch
+const GAP_BETWEEN_HUES = 5
 const seenColors = ref([])
 const controllers = ref([])
 
 async function run() {
-  // Kill any existing requests
+  // Kill any existing requests (if changed while requesting)
   controllers.value.forEach((controller) =>
     controller.abort('A different user input was specified'),
   )
 
   colors.value = []
   seenColors.value = []
+
+  // Hue requests in each batch (with GAP of 15):
   // 0, 15, 30, 45...
   // 1, 16, 31, 46...
 
-  for (let offset = 0; offset < DIST; offset++) {
+  for (let offset = 0; offset < GAP_BETWEEN_HUES; offset++) {
     const requests = []
-    for (let batch = 0; batch < 360 / DIST; batch++) {
-      const h = batch * DIST + offset
+    for (let batch = 0; batch < 360 / GAP_BETWEEN_HUES; batch++) {
+      const h = batch * GAP_BETWEEN_HUES + offset
       const controller = new AbortController()
       const req = fetch(`https://www.thecolorapi.com/id?hsl=${h},${s.value}%,${l.value}%`, {
         signal: controller.signal,
@@ -36,7 +39,7 @@ async function run() {
           colors.value = [
             ...colors.value,
             {
-              name: `${data.name.value}`, // <br> (i:${i}) <br> (dist:${data.name.distance})<br> (hsl:${data.hsl.value})`,
+              name: data.name.value,
               h: data.hsl.h,
               rgb: data.rgb.value,
               bg: data.hsl.value,
@@ -63,7 +66,7 @@ watch([s, l], () => {
 
 <template>
   <main
-    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 w-full relative [&_*]:text-white"
+    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 w-full relative"
   >
     <div
       v-for="color in colors"
@@ -74,13 +77,13 @@ watch([s, l], () => {
         order: color.h,
       }"
     >
-      <p class="bg-slate-700 px-2 py-1 w-fit h-fit text-center rounded-b">
+      <p class="bg-slate-700 px-2 py-1 w-fit h-fit text-center text-white rounded-b">
         {{ color.name }} - {{ color.rgb }}
       </p>
     </div>
     <div class="fixed z-10 bottom-0 flex justify-center w-full">
       <div
-        class="mx-auto w-fit px-2 py-1 drop-shadow-black drop-shadow-2xl rounded-t bg-white [&_*]:!text-black"
+        class="mx-auto w-fit px-2 py-1 drop-shadow-black drop-shadow-2xl rounded-t bg-white text-black"
       >
         <div class="flex gap-2">
           <label class="w-[5rem]" for="s">Saturation: </label>
